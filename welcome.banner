@@ -1,0 +1,40 @@
+#!/bin/bash
+############################
+#
+# welcome.banner
+#
+# display fancy welcome msg
+#
+# AM - 19Aug16 - Modified for MacOS to use sysvbanner from macports
+# AM - 18Aug05
+#
+############################
+ME=`basename $0`
+PLAT=`uname -s`
+
+bomb()
+{
+         MESG="$ME: BOMB!--${*}"
+         echo "$MESG"
+         exit 1
+}
+
+[[ -x /usr/bin/banner ]] && BANNER=/usr/bin/banner
+[[ -x /usr/local/bin/banner ]] && BANNER=/usr/local/bin/banner
+[[ -x /opt/local/bin/sysvbanner ]] && BANNER=/opt/local/bin/sysvbanner
+
+
+if [[ "$BANNER" == "" ]]
+then
+	if [[ "${PLAT}" == "Linux" ]]
+	then
+		[[ -x ~/bin/banner ]] && BANNER=~/bin/banner
+	else
+    		bomb "Can't locate banner utility!"
+	fi
+fi
+
+echo
+echo " W e l c o m e  T o : "
+echo "_____________________ "
+$BANNER `uname -n | cut -f1 -d.`

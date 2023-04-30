@@ -1,0 +1,18 @@
+#!/bin/bash
+
+case $TERM in
+	xterm*|dtterm)
+		echo -ne "\033]0;${USER}@${HOSTNAME%%.*}:${PWD/#$HOME/~}\007"
+		;;
+	screen)
+		echo -ne "\033_${USER}@${HOSTNAME%%.*}:${PWD/#$HOME/~}\033\\"
+		;;
+		
+	linux)	echo -ne ""
+		;;
+	*)
+		echo -ne "\033_${USER}@${HOSTNAME%%.*}:${PWD/#$HOME/~}\033\\"
+		;;
+esac
+
+#/afs/cad/u/a/n/andym/bin/got.afs.tokens
