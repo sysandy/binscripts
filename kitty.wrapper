@@ -1,0 +1,36 @@
+#!/bin/bash 
+
+ME=`basename $0`
+
+bomb() {
+	 echo "${ME} BOMB: ${1}"
+	 exit 1
+}
+
+##############################################################################
+# This script is a wrapper to start kitty terminal with various 
+# bg and fg color combinations, similar to what we do for xterm
+##############################################################################
+
+XTERM="${XTERM:-/usr/bin/kitty}"
+
+[[ -f $XTERM ]] || bomb "Unable to find kitty!"
+
+FGCOLOR="${1:-yellow}"
+BGCOLOR="${2:-black}"
+
+if (( $# == 0 ))
+then
+	# assume no arguments
+	# split $ME
+	if [[ "$ME" != "kitty.wrapper" ]]
+	then
+		FGCOLOR=`echo $ME | cut -f2 -d-`
+		BGCOLOR=`echo $ME | cut -f3 -d-`
+   fi
+fi
+
+XTERMOPS="-o background=${BGCOLOR} -o foreground=${FGCOLOR}" 
+
+$XTERM ${XTERMOPS} &
+
