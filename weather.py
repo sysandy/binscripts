@@ -10,8 +10,7 @@ import urllib.request
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 import json
-
-#url = 'https://api.weather.gov/stations/{}/observations/latest' . format(station_id)
+import os
 
 #############################################################################
 # 
@@ -32,26 +31,32 @@ def get_station_data(url):
 #############################################################################
 def c_to_f(temp):
 	# Convert C to F
+	unit = 'F'
 	if temp is not None:
 		temp = (temp * 1.8000) + 32
 		temp = round(temp)
-
+		temp = '{}{}' . format(temp, unit)
 	return(temp)
+
 #############################################################################
 # Convert Pascals to Inches of Mercury
 #############################################################################
 def p_to_i(pa):
+	unit = 'in'
 	i = pa * 0.00029530
 	i = round(i,2)
-
+	i = '{}{}' . format(i, unit)
 	return(i)
+
 #############################################################################
 # Convert km/h to mi/h
 #############################################################################
 def k_to_m(km):
+	unit = 'mph'
 	if km is not None:
 		km = km * 0.62137
 		km = round(km)
+		km = '{}{}' . format(km, unit)
 	return(km)
 
 #############################################################################
@@ -70,9 +75,13 @@ def angle2compass(direction):
 #############################################################################
 # main() 
 #############################################################################
+ME=sys.argv[0]
+ME=os.path.basename(ME)
+
 # Get arguments
 if len(sys.argv) < 2:
-	sys.exit ("Need station_id!")
+	print ("Usage: {} station_id!" . format(ME))
+	sys.exit(1)
 
 # Define location URL based on lat and lon coordinates
 # https://weather-gov.github.io/api/general-faqs
@@ -119,14 +128,13 @@ current_wind_direction = angle2compass(current_wind_direction)
 
 # Nicely format output 
 print ("Current Weather: {}" . format(current_weather))
-print ("Current Temperature: {}F" . format(current_temp))
+print ("Current Temperature: {}" . format(current_temp))
 print ("Current Humidity: {}%" . format(current_humidity))
 print ("Current Windchill: {}" . format(current_windchill))
 print ("Current Heatindex: {}" . format(current_heatindex))
-print ("Current Dewpoint: {}F" . format(current_dewpoint))
+print ("Current Dewpoint: {}" . format(current_dewpoint))
 print ("Current Wind Dir: {}" . format(current_wind_direction))
-print ("Current Wind Speed: {} mph" . format(current_wind_speed))
-print ("Current Wind Gust: {} mph". format(current_wind_gust))
-print ("Current Pressure: {} inches" . format(current_pressure))
-print ("")
+print ("Current Wind Speed: {} " . format(current_wind_speed))
+print ("Current Wind Gust: {} ". format(current_wind_gust))
+print ("Current Pressure: {}\n" . format(current_pressure))
 print ("Last Updated: {}" . format(current_timestamp))
