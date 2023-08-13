@@ -9,7 +9,6 @@
 import sys,os,argparse
 import requests
 import json
-import os
 import datetime 
 import pytz
 
@@ -103,6 +102,7 @@ def calc_wind(wind,metricflag=False):
 #############################################################################
 def c_to_f(temp):
 	# Convert C to F
+	unit = 'F'
 	if temp is not None:
 		temp = (temp * 1.8000) + 32
 		temp = round(temp)
@@ -119,14 +119,21 @@ def p_to_i(pa):
 		i = pa * 0.00029530
 		i = round(i,2)
 		i = '{}{}' . format(i, unit)
+	unit = 'in'
+	i = pa * 0.00029530
+	i = round(i,2)
+	i = '{}{}' . format(i, unit)
 	return(i)
 
 #############################################################################
 # Convert km/h to mi/h
 #############################################################################
 def k_to_m(km):
+	unit = 'mph'
 	if km is not None:
 		km = km * 0.62137
+		km = round(km)
+		km = '{}{}' . format(km, unit)
 	return(km)
 
 #############################################################################
@@ -442,4 +449,3 @@ else:
 		print(item)
 
 sys.exit()
-
