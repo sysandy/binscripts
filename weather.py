@@ -10,7 +10,12 @@ import sys,os,argparse
 import requests
 import json
 import datetime 
+from datetime import datetime as dt
+import dateutil.parser as dp
+import time
 import pytz
+import ephem
+
 
 #############################################################################
 # 
@@ -150,6 +155,30 @@ def angle2compass(direction):
 		return(direction)
 
 #############################################################################
+# Get Sunrise and Sunset times based on station coordinates
+#############################################################################
+def get_sunrise_sunset(latitude, longitude):
+	date = datetime.date.today()
+	observer = ephem.Observer()
+	observer.lat = str(latitude)
+	observer.long = str(longitude)
+	observer.date = date
+
+	sunrise = observer.next_rising(ephem.Sun())
+	sunset = observer.next_setting(ephem.Sun())
+
+	# return in localtime
+	sunrise = ephem.Date(sunrise)
+	sunrise = ephem.localtime(sunrise)
+	sunrise = sunrise.strftime("%Y-%m-%d %H:%M:%S")
+
+	sunset = ephem.Date(sunset)
+	sunset = ephem.localtime(sunset)
+	sunset = sunset.strftime("%Y-%m-%d %H:%M:%S")
+
+	return (sunrise, sunset)
+
+#############################################################################
 # Get WX Station Information -- returns ID and Name
 #############################################################################
 def get_wx_station_info(station_url):
@@ -158,8 +187,326 @@ def get_wx_station_info(station_url):
 	# Get Station Specific Data
 	stationID = station_data["properties"]["stationIdentifier"]
 	stationName = station_data["properties"]["name"]
+	# Get Lon and Lat coordinatents of station used for calc sunrise and sunset
+	stationLON = station_data["geometry"]["coordinates"][0]
+	stationLAT = station_data["geometry"]["coordinates"][1]
 
-	return(stationID, stationName)
+	return(stationID, stationName,stationLON,stationLAT)
+
+#############################################################################
+# Determine if we need to use NT icons or regular day icons 
+#############################################################################
+def get_icon_type(sunrise,sunset):
+	iconset=()
+	ct = dt.now()
+	AMorPM = ct.strftime("%p")
+
+	# Get current time in unix format 
+	current_time = round(time.time())
+	if AMorPM == "PM":
+		sunset_time = dp.parse(sunset)
+		sunset_time = round(sunset_time.timestamp())
+	
+		if current_time - sunset_time > 0:
+			iconset = "night"
+		else:
+			iconset = "day"
+	elif AMorPM == "AM":
+		sunrise_time = dp.parse(sunrise)
+		sunrise_time = round(sunrise_time.timestamp())
+
+		if current_time - sunrise_time < 0:
+			iconset = "night"
+		else:
+			iconset = "day"
+
+	return(iconset)
+
+#############################################################################
+# Define Dictionary to hold weather emoji for each weather type
+#############################################################################
+def get_wx_emoji(weather,sunrise,sunset):
+	
+	##############################################################################
+	# Define Sky Conditions that match specific emoji
+	# Taken from:
+	# https://symbl.cc/en/emoji/travel-and-places/sky-and-weather/
+	##############################################################################
+	# These Icons differ based on whether it is "NIGHT" or "DAY" which is 
+	# defined by whether the sun has risen or set.
+	# Determine what iconset to use based on return value from function
+	iconset=get_icon_type(sunrise,sunset)
+
+	if iconset == "day":
+		Clear = '🌞'
+		Mostly_Clear = '☀️'
+		Partly_Cloudy = '🌤️'
+		Variable_Cloudy = '⛅'
+		Mostly_Cloudy = '🌥️'
+		Showers = '🌦️'
+
+	elif iconset == "night":
+		Clear = '🌛'
+		Mostly_Clear = '🌛'
+		Partly_Cloudy = '☾'
+		Variable_Cloudy = '☁'
+		Mostly_Cloudy = '☁️₊'
+		Showers = '🌧️'
+
+	# These icons can be used day or night
+	Cloudy = '☁️₊' 
+	Rainy = '🌧️'
+	Tstorms = '⛈️'
+	ThunderStorm = '⚡'
+	LightThunder = '🌩️'
+	Snowy = '🌨️'
+	Snow = '❄️'
+	SnowRain = "❄"
+	Ice = '🧊'
+	Windy = '🌬️'
+	Foggy = '🌫️'
+	Coastal_Storm = '🌊'
+	Haze = '🌫️'
+	Smog = '🌁'
+	Tornado = '🌪️'
+	Hurricane = '🌀'
+
+	# Define dictionary for weather conditions
+	# Definitions from weather.gov/forecast-icons
+	weather_conditions = {
+		"fair": Clear,
+		"clear": Clear,
+		"fair with haze": Mostly_Clear,
+		"clear with haze": Mostly_Clear,
+		"fair and breezy": Clear,
+		"clear breezy": Clear,
+		"a few clouds": Partly_Cloudy,
+		"a few clouds with haze": Variable_Cloudy,
+		"a few clouds and breezy": Partly_Cloudy,
+		"mostly clear": Mostly_Clear,
+		"partly cloudy": Partly_Cloudy,
+		"partly cloudy with hazy": Partly_Cloudy,
+		"partly cloudy and breezy": Partly_Cloudy,
+		"mostly cloudy": Mostly_Cloudy,
+		"mostly cloudy with haze": Mostly_Cloudy,
+		"mostly cloudy and breezy": Mostly_Cloudy,
+		"fog/mist": Foggy,
+		"shallow fog": Foggy,
+		"overcast": Cloudy,
+		"overcast with hazy": Haze,
+		"overcast and breezy": Cloudy,
+		"light rain": Rainy,
+		"drizzle": Rainy,
+		"light drizzle": Rainy,
+		"heavy drizzle": Rainy,
+		"light rain fog/mist": Rainy,
+		"drizzle fog/mist": Rainy,
+		"light drizzle fog/mist": Rainy,
+		"heavy drizzle fog/mist": Rainy,
+		"light rain fog": Rainy,
+		"drizzle fog": Rainy,
+		"light drizzle fog": Rainy,
+		"heavy drizzle fog": Rainy,
+		"rain": Rainy,
+		"heavy rain": Rainy,
+		"rain fog/mist": Rainy,
+		"heavy rain fog/mist": Rainy,
+		"rain fog": Rainy,
+		"heavy rain fog": Rainy,
+		"thunderstorm in vicinity hail haze": ThunderStorm,
+		"thunderstorm haze in vicinity hail": ThunderStorm,
+		"thunderstorm light rain hail haze": ThunderStorm,
+		"thunderstorm heavy rain hail haze": ThunderStorm,
+		"thunderstorm hail fog": ThunderStorm,
+		"thunderstorm light rain hail fog": ThunderStorm,
+		"thunderstorm heavy rain hail fog": ThunderStorm,
+		"thunderstorm small hail/snow pellets": ThunderStorm,
+		"thunderstorm rain small hail/snow pellets": ThunderStorm,
+		"light thunderstorm rain small hail/snow pellets": LightThunder,
+		"heavy thunderstorm rain small hail/snow pellets": LightThunder,
+		"thunderstorm": Tstorms,
+		"thunderstorm rain": Tstorms,
+		"light thunderstorm rain": LightThunder,
+		"heavy thunderstorm rain": Tstorms,
+		"thunderstorm rain fog/mist": LightThunder,
+		"light thunderstorm rain fog/mist": LightThunder,
+		"heavy thunderstorm rain fog and windy": LightThunder,
+		"heavy thunderstorm rain fog/mist": LightThunder,
+		"thunderstorm showers in vicinity": LightThunder,
+		"light thunderstorm rain haze": LightThunder,
+		"heavy thunderstorm rain haze": LightThunder,
+		"thunderstorm fog": LightThunder,
+		"light thunderstorm rain fog": LightThunder,
+		"heavy thunderstorm rain fog": LightThunder,
+		"thunderstorm light rain": LightThunder,
+		"thunderstorm heavy rain": LightThunder,
+		"thunderstorm rain fog/mist": LightThunder,
+		"thunderstorm light rain fog/mist": LightThunder,
+		"thunderstorm heavy rain fog/mist": LightThunder,
+		"thunderstorm in vicinity fog/mist": ThunderStorm,
+		"thunderstorm showers in vicinity": Tstorms,
+		"thunderstorm in vicinity haze": ThunderStorm,
+		"thunderstorm haze in vicinity": ThunderStorm,
+		"thunderstorm light rain haze":  LightThunder,
+		"thunderstorm heavy rain haze": LightThunder,
+		"thunderstorm fog": ThunderStorm,
+		"thunderstorm light rain fog": Tstorms,
+		"thunderstorm heavy rain fog": LightThunder,
+		"thunderstorm hail": ThunderStorm,
+		"light thunderstorm rain hail": ThunderStorm,
+		"heavy thunderstorm rain hail": ThunderStorm,
+		"thunderstorm rain hail fog/mist": LightThunder,
+		"light thunderstorm rain hail fog/mist": LightThunder,
+		"heavy thunderstorm rain hail fog/hail": LightThunder,
+		"thunderstorm showers in vicinity hail": LightThunder,
+		"light thunderstorm rain hail haze": LightThunder,
+		"heavy thunderstorm rain hail haze": LightThunder,
+		"thunderstorm hail fog": ThunderStorm,
+		"light thunderstorm rain hail fog": LightThunder,
+		"heavy thunderstorm rain hail fog":LightThunder,
+		"thunderstorm light rain hail":LightThunder,
+		"thunderstorm heavy rain hail": Tstorms,
+		"thunderstorm rain hail fog/mist": Tstorms,
+		"thunderstorm light rain hail fog/mist": Tstorms,
+		"thunderstorm heavy rain hail fog/mist": Tstorms,
+		"thunderstorm in vicinity hail": ThunderStorm,
+		"thunderstorm in vicinity hail haze": ThunderStorm,
+		"thunderstorm haze in vicinity hail": ThunderStorm,
+		"thunderstorm light rain hail haze": LightThunder,
+		"thunderstorm heavy rain hail haze": LightThunder,
+		"thunderstorm hail fog": ThunderStorm,
+		"thunderstorm light rain hail fog": Tstorms,
+		"thunderstorm heavy rain hail fog": Tstorms,
+		"thunderstorm small hail/snow pellets": Tstorms,
+		"thunderstorm rain small hail/snow pellets": Tstorms,
+		"light thunderstorm rain small hail/snow pellets": Tstorms,
+		"heavy thunderstorm rain small hail/snow pellets": Tstorms,
+		"rain ice pellets": SnowRain,
+		"light rain ice pellets": SnowRain,
+		"heavy rain ice pellets": SnowRain,
+		"Drizzle Ice Pellets": SnowRain,
+		"light drizzle ice pellets": SnowRain,
+		"heavy drizzle ice pellets": SnowRain,
+		"ice pellets rain": SnowRain,
+		"light ice pellets rain": SnowRain,
+		"heavy ice pellets rain": SnowRain,
+		"ice pellets drizzle": SnowRain,
+		"light ice pellets drizzle": SnowRain,
+		"heavy ice pellets drizzle": SnowRain,
+		"freezing rain": SnowRain,
+		"freezing drizzle": SnowRain,
+		"light freezing rain": SnowRain,
+		"light freezing drizzle": SnowRain,
+		"heavy freezing rain": SnowRain,
+		"heavy freezing drizzle": SnowRain,
+		"freezing rain in vicinity": SnowRain,
+		"freezing drizzle in vicinity": SnowRain,
+		"freezing rain rain": SnowRain,
+		"light freezing rain rain": SnowRain,
+		"heavy freezing rain rain": SnowRain,
+		"rain freezing rain": SnowRain,
+		"light rain freezing rain": SnowRain,
+		"heavy rain freezing rain": SnowRain,
+		"freezing drizzle rain": SnowRain,
+		"light freezing drizzle rain": SnowRain,
+		"heavy freezing drizzle rain": SnowRain,
+		"rain freezing drizzle": SnowRain,
+		"light rain freezing drizzle": SnowRain,
+		"heavy rain freezing drizzle": SnowRain,
+		"freezing rain snow": SnowRain,
+		"light freezing rain snow": SnowRain,
+		"heavy freezing rain snow": SnowRain,
+		"freezing drizzle snow": SnowRain,
+		"light freezing drizzle snow": SnowRain,
+		"heavy freezing drizzle snow": SnowRain,
+		"snow freezing rain": SnowRain,
+		"light snow freezing rain": SnowRain,
+		"heavy snow freezing rain": SnowRain,
+		"snow freezing drizzle": SnowRain,
+		"light snow freezing drizzle": SnowRain,
+		"heavy snow freezing drizzle": SnowRain,
+		"ice pellets": Ice,
+		"light ice pellets": Ice,
+		"heavy ice pellets": Ice,
+		"ice pellets in vicinity": Ice,
+		"showers ice pellets": Ice,
+		"thunderstorm ice pellets": Ice,
+		"ice crystals": Ice,
+		"hail": Ice,
+		"small hail/snow pellets": Ice,
+		"light small hail/snow pellets": Ice,
+		"heavy small hail/snow pellets": Ice,
+		"showers hail": Ice,
+		"hail showers": Ice,
+		"snow ice pellets": Ice,
+		"rain snow": SnowRain,
+		"light rain snow": SnowRain,
+		"heavy rain snow": SnowRain,
+		"snow rain": SnowRain,
+		"light snow rain": SnowRain,
+		"heavy snow rain": SnowRain,
+		"drizzle snow": SnowRain,
+		"light drizzle snow": SnowRain,
+		"heavy drizzle snow": SnowRain,
+		"snow drizzle": SnowRain,
+		"light snow drizzle": SnowRain,
+		"heavy drizzle snow": SnowRain,
+		"snow": Snow,
+		"light snow": Snow,
+		"heavy snow": Snow,
+		"snow showers": Snow,
+		"light snow showers": Snow,
+		"heavy snow showers": Snow,
+		"showers snow": Snow,
+		"light showers snow": Snow,
+		"heavy showers snow": Snow,
+		"snow fog/mist": Snow,
+		"light snow fog/mist": Snow,
+		"heavy snow fog/mist": Snow,
+		"snow showers fog/mist": Snow,
+		"light snow showers fog/mist": Snow,
+		"heavy snow showers fog/mist": Snow,
+		"showers snow fog/mist": Snow,
+		"light showers snow fog/mist": Snow,
+		"heavy showers snow fog/mist": Snow,
+		"snow fog": Snow,
+		"light snow fog": Snow,
+		"heavy snow fog": Snow,
+		"snow showers fog":	Snow,
+		"light showers snow fog/mist": Snow,
+		"heavy showers snow fog/mist": Snow,
+		"snow fog": Snow,
+		"light snow fog": Snow,
+		"heavy snow fog": Snow,
+		"snow showers fog": Snow,
+		"light snow showers fOg": Snow,
+		"heavy snow showers fog": Snow,
+		"showers in vicinity snow": Snow,
+		"snow showers in vicinity": Snow,
+		"snow showers in vicinity fog/mist": Snow,
+		"snow showers in vicinity fog": Snow,
+		"low drifting snow": Snow,
+		"blowing snow": Snow,
+		"snow low drifting snow": Snow,
+		"snow blowing snow": Snow,
+		"light snow low drifting snow": Snow,
+		"light snow blowing snow": Snow,
+		"light snow blowing snow fog/mist": Snow,
+		"heavy snow low drifting snow": Snow,
+		"heavy snow blowing snow": Snow,
+		"thunderstorm snow": Snow,
+		"light thunderstorm snow": Snow,
+		"heavy thunderstorm snow": Snow,
+		"snow grains": Snow,
+		"light snow grains": Snow,
+		"heavy snow grains": Snow,
+		"heavy blowing snow": Snow,
+		"blowing snow in vicinity": Snow,
+		
+	}
+
+	# Return UNICODE value for emoji
+	return(weather_conditions.get(weather.lower(), "❓"))
 
 #############################################################################
 # Print Weather Data to screen based on options
@@ -176,7 +523,7 @@ def display_weather_data(station_id, options):
 	api_url = 'https://api.weather.gov'
 	# Get Station Information
 	station_url = '{}/stations/{}' . format(api_url, station_id)
-	stationID,stationName = get_wx_station_info(station_url)
+	stationID,stationName,stationLON,stationLAT = get_wx_station_info(station_url)
 	# Get Station Data Information
 	station_data_url = '{}/stations/{}/observations/latest' . format(api_url, station_id)
 	data = urlreq(station_data_url)
@@ -195,6 +542,9 @@ def display_weather_data(station_id, options):
 		for key in titles_dict:
 			titles_dict[key] = ''
 
+	# Get sunrise and sunset times of station for current date
+	sunrise,sunset = get_sunrise_sunset(stationLAT,stationLON)
+
     ####################################################################
     # Display Weather Station Header Information
     ####################################################################
@@ -203,6 +553,8 @@ def display_weather_data(station_id, options):
 		print ("=" * 60)	
 		print ("Station: {:<10}{}" . format(stationID, stationName))
 		print ("Timestamp: {}" . format(current_timestamp))
+		print ("Coordinates: LON[{}], LAT[{}]" . format(stationLON, stationLAT))
+		print ("Sunrise: {}, Sunset: {}" . format(sunrise, sunset))
 		print ("=" * 60)	
 	# Display values based on options
     ####################################################################
@@ -212,7 +564,12 @@ def display_weather_data(station_id, options):
 		current_weather = data["properties"]["textDescription"]
 		#title = "Current Weather: "
 		title = titles_dict['weather']
-		weather_display_format = "{}{}" . format(title,current_weather)
+		if display_icon:
+			weather_icon = get_wx_emoji(current_weather,sunrise,sunset)
+			weather_display_format = "{}{}{}" . format(title,current_weather,weather_icon)
+		else:
+			weather_display_format = "{}{}" . format(title,current_weather)
+
 		weather_display_list.append(weather_display_format)
 		#print('{} {}' . format(title,current_weather))
 
@@ -355,6 +712,7 @@ parser.add_argument("--metric", help="Print all data in metric units", action="s
 parser.add_argument("--valuesonly", help="Display on data values, no titles", action="store_true")
 parser.add_argument("--noheaders", help="Don't display header with station info", action="store_true")
 parser.add_argument("--allvalues", help="Dislay all data values", action="store_true")
+parser.add_argument("--icon", help="Display weather icon for weather value", action="store_true")
 
 args = parser.parse_args()
 
@@ -416,10 +774,15 @@ if args.noheaders or args.script:
 else:
 	display_headers = True
 
+if args.icon:
+	display_icon = True
+else:
+	display_icon = False
 
 display_options = { 'display_weather':display_weather, 'display_temp':display_temp, 'display_humidity':display_humidity, 'display_windchill':display_windchill, 
                     'display_heatindex':display_heatindex, 'display_dewpoint': display_dewpoint, 'display_winddirection':display_winddirection, 'display_windspeed':display_windspeed,
-			        'display_windgust':display_windgust, 'display_pressure':display_pressure, 'display_metric':display_metric, 'display_notitles':display_notitles, 'display_headers':display_headers}
+			        'display_windgust':display_windgust, 'display_pressure':display_pressure, 'display_metric':display_metric, 'display_notitles':display_notitles, 'display_headers':display_headers, 'display_icon':display_icon}
+
 
 station_id = args.stationID
 
