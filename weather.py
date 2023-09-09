@@ -60,15 +60,17 @@ def urlreq(api_endpoint, method='get', headers=None, payload=None):
 				data = response.json()
 		return(data)
 #############################################################################
-# 
+# Convert ISO 8601 UTC Timestamp to Local Time
 #############################################################################
 def clean_timestamp(utc_timestamp_str):
-	utc_timestamp = datetime.datetime.strptime(utc_timestamp_str, "%Y-%m-%dT%H:%M:%S%z")
+	iso8601_timestamp = "%Y-%m-%dT%H:%M:%S%z"
+	utc_timestamp = dt.strptime(utc_timestamp_str, iso8601_timestamp)
 	# Get localtime
-	#local_timezone = pytz.timezone(pytz.country_timezones["US"][0])		
-	local_timezone = datetime.datetime.now(pytz.timezone('UTC')).astimezone().tzinfo
+	local_timezone = dt.now(pytz.timezone('UTC')).astimezone().tzinfo
 	local_timestamp = utc_timestamp.astimezone(local_timezone)
-	local_timestamp_str = local_timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+	local_timefmt = "%Y-%m-%d %H:%M:%S %Z"
+	local_timefmt = "%m/%d/%Y %H:%M:%S %Z"
+	local_timestamp_str = local_timestamp.strftime(local_timefmt)
 
 	return(local_timestamp_str)
 
@@ -170,11 +172,11 @@ def get_sunrise_sunset(latitude, longitude):
 	# return in localtime
 	sunrise = ephem.Date(sunrise)
 	sunrise = ephem.localtime(sunrise)
-	sunrise = sunrise.strftime("%Y-%m-%d %H:%M:%S")
+	sunrise = sunrise.strftime("%m/%d/%Y %H:%M:%S")
 
 	sunset = ephem.Date(sunset)
 	sunset = ephem.localtime(sunset)
-	sunset = sunset.strftime("%Y-%m-%d %H:%M:%S")
+	sunset = sunset.strftime("%m/%d/%Y %H:%M:%S")
 
 	return (sunrise, sunset)
 
@@ -344,6 +346,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"thunderstorm light rain fog/mist": LightThunder,
 		"thunderstorm heavy rain fog/mist": LightThunder,
 		"thunderstorm in vicinity fog/mist": ThunderStorm,
+		"thunderstorm in vicinity fog": ThunderStorm,
 		"thunderstorm showers in vicinity": Tstorms,
 		"thunderstorm in vicinity haze": ThunderStorm,
 		"thunderstorm haze in vicinity": ThunderStorm,
@@ -502,7 +505,38 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"heavy snow grains": Snow,
 		"heavy blowing snow": Snow,
 		"blowing snow in vicinity": Snow,
-		
+		"funnel cloud": Tornado,
+		"funnel cloud in vicinity": Tornado,
+		"tornado/water spout": Tornado,
+		"tornado": Tornado,
+		"hurricane warming": Hurricane,
+		"hurricane watch": Hurricane,
+		"tropical storm warning": Coastal_Storm,
+		"tropical storm watch": Coastal_Storm,
+		"tropical storm conditions presently exist w/hurricane warning in effect": Coastal_Storm,
+		"windy": Windy,
+		"breezy": Windy,
+		"fair and windy": Windy,
+		"a few clouds and windy": Windy,
+		"partly cloudy and windy": Windy,
+		"mostly cloudy and windy": Windy,
+		"overcast and windy": Windy,
+		"smoke": Smog,
+		"haze": Haze,
+		"hot": Mostly_Clear,
+		"cold": Ice,
+		"blizzard": Snow,
+		"freezing fog": Foggy,
+		"partial fog": Foggy,
+		"patches of fog": Foggy,
+		"fog in vicinity": Foggy,
+		"freezing fog in vicinity": Foggy,
+		"shallow fog in vincinity": Foggy,
+		"partial fog in vincinity": Foggy,
+		"patches of fog in vicinity": Foggy,
+		"showers in vicinity fog": Foggy,
+		"light freezing fog": Foggy,
+		"heavy freezing fog": Foggy
 	}
 
 	# Return UNICODE value for emoji
