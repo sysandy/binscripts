@@ -83,9 +83,9 @@ def calc_temp(temp,metricflag=False):
 		if not metricflag:
 			# Convert C to F
 			temp = (temp * 1.8000) + 32
-			unit = 'F'
+			unit = '°F'
 		else:
-			unit = 'C'
+			unit = '°C'
 		temp = round(temp)
 	return(temp,unit)
 
@@ -334,6 +334,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"light thunderstorm rain fog/mist": LightThunder,
 		"heavy thunderstorm rain fog and windy": LightThunder,
 		"heavy thunderstorm rain fog/mist": LightThunder,
+		"heavy thunderstorms and heavy rain and fog/mist": LightThunder,
 		"thunderstorm showers in vicinity": LightThunder,
 		"light thunderstorm rain haze": LightThunder,
 		"heavy thunderstorm rain haze": LightThunder,
@@ -367,6 +368,8 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"thunderstorm hail fog": ThunderStorm,
 		"light thunderstorm rain hail fog": LightThunder,
 		"heavy thunderstorm rain hail fog":LightThunder,
+		"heavy thunderstorms and heavy rain": LightThunder,
+		"thunderstorms and rain": LightThunder,
 		"thunderstorm light rain hail":LightThunder,
 		"thunderstorm heavy rain hail": Tstorms,
 		"thunderstorm rain hail fog/mist": Tstorms,
