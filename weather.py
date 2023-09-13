@@ -252,7 +252,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		Mostly_Clear = '🌛'
 		Partly_Cloudy = '☾'
 		Variable_Cloudy = '☁'
-		Mostly_Cloudy = '☁️₊'
+		Mostly_Cloudy = '☁️'
 		Showers = '🌧️'
 
 	# These icons can be used day or night
@@ -294,6 +294,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"mostly cloudy and breezy": Mostly_Cloudy,
 		"fog/mist": Foggy,
 		"shallow fog": Foggy,
+		"cloudy": Cloudy,
 		"overcast": Cloudy,
 		"overcast with hazy": Haze,
 		"overcast and breezy": Cloudy,
@@ -312,7 +313,9 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"rain": Rainy,
 		"heavy rain": Rainy,
 		"rain fog/mist": Rainy,
+		"rain and fog/mist": Rainy,
 		"heavy rain fog/mist": Rainy,
+		"heavy rain and fog/mist": Rainy,
 		"rain fog": Rainy,
 		"heavy rain fog": Rainy,
 		"thunderstorm in vicinity hail haze": ThunderStorm,
@@ -332,6 +335,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		"heavy thunderstorm rain": Tstorms,
 		"thunderstorm rain fog/mist": LightThunder,
 		"light thunderstorm rain fog/mist": LightThunder,
+		"light thunderstorms and light rain and fog/mist": LightThunder,
 		"heavy thunderstorm rain fog and windy": LightThunder,
 		"heavy thunderstorm rain fog/mist": LightThunder,
 		"heavy thunderstorms and heavy rain and fog/mist": LightThunder,
