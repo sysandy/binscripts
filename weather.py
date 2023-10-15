@@ -256,7 +256,7 @@ def get_wx_emoji(weather,sunrise,sunset):
 		Showers = '🌧️'
 
 	# These icons can be used day or night
-	Cloudy = '☁️₊' 
+	Cloudy ='☁️'
 	Rainy = '🌧️'
 	Tstorms = '⛈️'
 	ThunderStorm = '⚡'
