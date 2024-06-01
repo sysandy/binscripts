@@ -5,6 +5,9 @@
 # values delimited by ',' to be used as input for other scripts
 # Andy Malato
 # June 2023
+# Updated May 31 2024 (Almost a year from initial code)
+#   Removed dependacy on pytz and also added icon from seperated weather for script
+#   output.  Additional cleanup of unneeded comments in code
 ##############################################################################
 import sys,os,argparse
 import requests
@@ -13,7 +16,7 @@ import datetime
 from datetime import datetime as dt
 import dateutil.parser as dp
 import time
-import pytz
+import zoneinfo
 import ephem
 
 
@@ -66,7 +69,7 @@ def clean_timestamp(utc_timestamp_str):
     iso8601_timestamp = "%Y-%m-%dT%H:%M:%S%z"
     utc_timestamp = dt.strptime(utc_timestamp_str, iso8601_timestamp)
     # Get localtime
-    local_timezone = dt.now(pytz.timezone('UTC')).astimezone().tzinfo
+    local_timezone = dt.now(zoneinfo.ZoneInfo('UTC')).astimezone().tzinfo
     local_timestamp = utc_timestamp.astimezone(local_timezone)
     local_timefmt = "%Y-%m-%d %H:%M:%S %Z"
     local_timefmt = "%m/%d/%Y %H:%M:%S %Z"
@@ -203,6 +206,9 @@ def get_icon_type(sunrise,sunset):
     ct = dt.now()
     AMorPM = ct.strftime("%p")
 
+    #print(sunrise)
+    #print(sunset)
+
     # Get current time in unix format 
     current_time = round(time.time())
     if AMorPM == "PM":
@@ -303,8 +309,10 @@ def get_wx_emoji(weather,sunrise,sunset):
         "light drizzle": Rainy,
         "heavy drizzle": Rainy,
         "light rain fog/mist": Rainy,
+        "light rain and fog/mist": Rainy,
         "drizzle fog/mist": Rainy,
         "light drizzle fog/mist": Rainy,
+        "light drizzle and fog/mist": Rainy,
         "heavy drizzle fog/mist": Rainy,
         "light rain fog": Rainy,
         "drizzle fog": Rainy,
@@ -374,6 +382,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "heavy thunderstorm rain hail fog":LightThunder,
         "heavy thunderstorms and heavy rain": LightThunder,
         "thunderstorms and rain": LightThunder,
+        "thunderstorms and rain and fog/mist": LightThunder,
         "thunderstorm light rain hail":LightThunder,
         "thunderstorm heavy rain hail": Tstorms,
         "thunderstorm rain hail fog/mist": Tstorms,
@@ -603,20 +612,26 @@ def display_weather_data(station_id, options):
     ####################################################################
     if (options['display_weather']):
         current_weather = data["properties"]["textDescription"]
-        #title = "Current Weather: "
         title = titles_dict['weather']
         if display_icon:
             weather_icon = get_wx_emoji(current_weather,sunrise,sunset)
-            if icononly:
-                weather_display_format = "{}" . format(weather_icon)
+            if not icononly:
+                if scriptFlag:
+                    weather_display_icon = "{}{}" . format(title,weather_icon)
+                    weather_display_format = "{}{}" . format(title,current_weather)
+                else:
+                    weather_display_format = "{}{}{}" . format(title,current_weather,weather_icon)
             else:
-                weather_display_format = "{}{}{}" . format(title,current_weather,weather_icon)
+                weather_display_format = "{}{}" . format(title,weather_icon)
         else:
-            weather_display_format = "{}{}" . format(title,current_weather)
+             weather_display_format = "{}{}" . format(title,current_weather)
 
         weather_display_list.append(weather_display_format)
-        #print('{} {}' . format(title,current_weather))
-
+        if display_icon:
+            if scriptFlag:
+                if not icononly:
+                    weather_display_list.append(weather_display_icon)
+        
     ####################################################################
     # Display Temperature
     ####################################################################
@@ -626,7 +641,6 @@ def display_weather_data(station_id, options):
         title = titles_dict['temperature']
         temp_display_format = "{}{}{}" . format(title,current_temp,unit)
         weather_display_list.append(temp_display_format)
-        #print('{} {}{}' . format(title,current_temp,unit))
 
     ####################################################################
     # Display Humidity
@@ -636,11 +650,9 @@ def display_weather_data(station_id, options):
         if current_humidity is not None:
             current_humidity = round(current_humidity)
             unit = '%'
-        #title = "Current Humidity: "
         title = titles_dict['humidity']
         humidity_display_format = "{}{}{}" . format(title,current_humidity,unit)
         weather_display_list.append(humidity_display_format)
-        #print ('{} {}{}' . format(title,current_humidity,unit))
 
     ####################################################################
     # Display dewpoint
@@ -648,23 +660,19 @@ def display_weather_data(station_id, options):
     if (options['display_dewpoint']):
         current_dewpoint = data["properties"]["dewpoint"]["value"]
         current_dewpoint,unit = calc_temp(current_dewpoint,metricflag)
-        #title = "Current Dewpoint: "
         title = titles_dict['dewpoint']
         dewpoint_display_format = "{}{}{}" . format(title,current_dewpoint,unit)
         weather_display_list.append(dewpoint_display_format)
-        #print('{} {}{}' . format(title,current_dewpoint,unit))
 
     ####################################################################
     # Display Barametric Pressure
     ####################################################################
     if (options['display_pressure']):
         current_pressure = data["properties"]["barometricPressure"]["value"]
-        #title = "Current Pressure: "
         title = titles_dict['pressure']
         current_pressure = p_to_i(current_pressure)
         pressure_display_format = "{}{}" . format(title,current_pressure,unit)
         weather_display_list.append(pressure_display_format)
-        #print ('{} {}' . format(title,current_pressure,unit))
 
     ####################################################################
     # Display Windchill 
@@ -672,11 +680,9 @@ def display_weather_data(station_id, options):
     if (options['display_windchill']):
         current_windchill = data["properties"]["windChill"]["value"]
         current_windchill,unit = calc_temp(current_windchill,metricflag)
-        #title = "Current Windchill: "
         title = titles_dict['windchill']
         windchill_display_format = "{}{}{}" . format(title,current_windchill,unit)
         weather_display_list.append(windchill_display_format)
-        #print('{} {}{}' . format(title,current_windchill,unit))
 
     ####################################################################
     # Display Heat Index
@@ -684,11 +690,9 @@ def display_weather_data(station_id, options):
     if (options['display_heatindex']):
         current_heatindex = data["properties"]["heatIndex"]["value"]
         current_heatindex,unit = calc_temp(current_heatindex,metricflag)
-        #title = "Current Heatindex: "
         title = titles_dict['heatindex']
         heatindex_display_format = "{}{}{}" . format(title,current_heatindex,unit)
         weather_display_list.append(heatindex_display_format)
-        #print('{} {}{}' . format(title,current_heatindex,unit))
     
     ####################################################################
     # Display Wind
@@ -699,11 +703,9 @@ def display_weather_data(station_id, options):
         if current_wind_speed == 0:
             current_wind_speed = "Calm"
             unit = ''
-        #title = "Current Wind: "
         title = titles_dict['wind']
         wind_display_format = "{}{}{}" . format(title,current_wind_speed,unit)
         weather_display_list.append(wind_display_format)
-        #print('{} {}{}' . format(title,current_wind_speed,unit))
 
     ####################################################################
     # Display Wind Gust
@@ -711,25 +713,21 @@ def display_weather_data(station_id, options):
     if (options['display_windgust']):
         current_wind_gust = data["properties"]["windGust"]["value"]
         current_wind_gust,unit = calc_wind(current_wind_gust,metricflag)
-        #title = "Current Wind Gust: "
         title = titles_dict['windgust']
         windgust_display_format = "{}{}{}" . format(title,current_wind_gust,unit)
         weather_display_list.append(windgust_display_format)
-        #print('{} {}{}' . format(title,current_wind_gust,unit))
 
     ####################################################################
     # Display Wind Direction
     ####################################################################
     if (options['display_winddirection']):
         current_wind_direction = data["properties"]["windDirection"]["value"]
-        #title = "Current Wind Direction: "
         title = titles_dict['winddir']
         current_wind_direction = angle2compass(current_wind_direction)
         if current_wind_direction == 0:
             current_wind_direction = 'N/A'
         wind_direction_display_format = "{}{}" . format(title,current_wind_direction)
         weather_display_list.append(wind_direction_display_format)
-        #print ('{} {}' . format(title,current_wind_direction))
 
     # return list of data to caller
     return(weather_display_list)
@@ -818,6 +816,11 @@ if args.noheaders or args.script:
     display_headers = False
 else:
     display_headers = True
+
+if args.script:
+    scriptFlag = True
+else:
+    scriptFlag = False
 
 if args.icon:
     display_icon = True
