@@ -6,6 +6,8 @@
 #
 # Andy Malato
 # March 2024
+# Updated December 2024 for Advent background
+#
 ##############################################################################
 WALLPAPER="${1:?You must specify full path to image or directory of images}"
 SCREEN="${2:-0}"
