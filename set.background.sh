@@ -141,6 +141,11 @@ case $WALLPAPER in
 		[[ -d ${imgdir}/Easter/${display_resolution} ]] && 
 			WALLPAPER=${imgdir}/Easter/${display_resolution} 
 	;;
+	"advent")
+		[[ -d ${imgdir}/advent/${display_resolution} ]] && 
+			WALLPAPER=${imgdir}/advent/${display_resolution} 
+	;;
+		
 	"christmas")
 
 		[[ -d ${imgdir}/Christmas/${display_resolution} ]] && 
