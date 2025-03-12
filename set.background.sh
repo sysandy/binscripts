@@ -11,6 +11,8 @@
 ##############################################################################
 WALLPAPER="${1:?You must specify full path to image or directory of images}"
 SCREEN="${2:-0}"
+ZOOMFILL="${3:-no}"
+
 ME=$(basename $0)
 
 # places to look for backgrounds.  First valid directory in array wins!
@@ -81,14 +83,19 @@ getresofmonitor() {
 setbackground() {
 
 	local _wallpaperobj=${1}
+	if [[ "${ZOOMFILL}" == "yes" ]]
+		then OPTIONS="--set-zoom-fill"
+	elif [[ "${ZOOMFILL}" == "no" ]]
+		then OPTIONS="--set-zoom"
+	fi
 
 	if [[ -d "${_wallpaperobj}" ]] 
 	then
 		# we set background for ${_screen} to random image given in directory
-		${NITROGEN} --set-zoom --save --random ${_wallpaperobj} --head=${SCREEN}
+		${NITROGEN} ${OPTIONS} --save --random ${_wallpaperobj} --head=${SCREEN}
 	else
 		# we assume background is an image
-		${NITROGEN} --set-zoom --save ${_wallpaperobj} --head=${SCREEN}
+		${NITROGEN} ${OPTIONS} --save ${_wallpaperobj} --head=${SCREEN}
 	fi
 
 }
