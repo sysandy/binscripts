@@ -8,6 +8,11 @@
 # Updated May 31 2024 (Almost a year from initial code)
 #   Removed dependacy on pytz and also added icon from seperated weather for script
 #   output.  Additional cleanup of unneeded comments in code
+# Updated May 11 2025
+#   Fixed bug with sunrise/sunset times that preventing "Night" Icons from
+#   Displaying during the day.
+# Updated June 12 2025
+#   Added --forecast option to display forecast for given stationID
 ##############################################################################
 import sys,os,argparse
 import requests
@@ -18,7 +23,7 @@ import dateutil.parser as dp
 import time
 import zoneinfo
 import ephem
-
+import shutil
 
 #############################################################################
 # 
@@ -186,8 +191,13 @@ def get_sunrise_sunset(latitude, longitude):
 #############################################################################
 # Get WX Station Information -- returns ID and Name
 #############################################################################
-def get_wx_station_info(station_url):
+def get_wx_station_info(station_id):
     
+    # URL Stuff
+    #api_url = 'https://api.weather.gov'
+    api_url = API_URL
+    station_url = '{}/stations/{}' . format(api_url, station_id)
+
     station_data = urlreq(station_url)
     # Get Station Specific Data
     stationID = station_data["properties"]["stationIdentifier"]
@@ -196,7 +206,7 @@ def get_wx_station_info(station_url):
     stationLON = station_data["geometry"]["coordinates"][0]
     stationLAT = station_data["geometry"]["coordinates"][1]
 
-    return(stationID, stationName,stationLON,stationLAT)
+    return(stationID,stationName,stationLON,stationLAT)
 
 #############################################################################
 # Determine if we need to use NT icons or regular day icons 
@@ -211,19 +221,29 @@ def get_icon_type(sunrise,sunset):
 
     # Get current time in unix format 
     current_time = round(time.time())
+    sunset_time = dp.parse(sunset)
+    sunset_time = round(sunset_time.timestamp())
+    sunset_time = sunset_time + 86400 # need to adjust for one day
+    sunrise_time = dp.parse(sunrise)
+    sunrise_time = round(sunrise_time.timestamp())
+    #print("Current Time: {}" . format(current_time))
+    #print("Sunrise Time: {}" . format(sunrise_time))
+    #print("Sunset Time: {}" . format(sunset_time))
+
     if AMorPM == "PM":
-        sunset_time = dp.parse(sunset)
-        sunset_time = round(sunset_time.timestamp())
-    
-        if current_time - sunset_time > 0:
+        #sunset_time = dp.parse(sunset)
+        #sunset_time = round(sunset_time.timestamp())
+        #if current_time - sunset_time > 0:
+        if current_time > sunset_time:
             iconset = "night"
         else:
             iconset = "day"
     elif AMorPM == "AM":
-        sunrise_time = dp.parse(sunrise)
-        sunrise_time = round(sunrise_time.timestamp())
+        #sunrise_time = dp.parse(sunrise)
+        #sunrise_time = round(sunrise_time.timestamp())
 
-        if current_time - sunrise_time < 0:
+        #if current_time - sunrise_time < 0:
+        if current_time < sunrise_time:
             iconset = "night"
         else:
             iconset = "day"
@@ -310,6 +330,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "heavy drizzle": Rainy,
         "light rain fog/mist": Rainy,
         "light rain and fog/mist": Rainy,
+        "fog/mist and light rain": Rainy,
         "drizzle fog/mist": Rainy,
         "light drizzle fog/mist": Rainy,
         "light drizzle and fog/mist": Rainy,
@@ -398,6 +419,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "thunderstorm heavy rain hail fog": Tstorms,
         "thunderstorm small hail/snow pellets": Tstorms,
         "thunderstorm rain small hail/snow pellets": Tstorms,
+        "thunderstorms": Tstorms,
         "light thunderstorm rain small hail/snow pellets": Tstorms,
         "heavy thunderstorm rain small hail/snow pellets": Tstorms,
         "rain ice pellets": SnowRain,
@@ -481,6 +503,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "heavy showers snow": Snow,
         "snow fog/mist": Snow,
         "light snow fog/mist": Snow,
+        "light snow and fog/mist": Snow,
         "heavy snow fog/mist": Snow,
         "snow showers fog/mist": Snow,
         "light snow showers fog/mist": Snow,
@@ -557,7 +580,49 @@ def get_wx_emoji(weather,sunrise,sunset):
 
     # Return UNICODE value for emoji
     return(weather_conditions.get(weather.lower(), "❓"))
+#############################################################################
+# Print Weather Forecast to screen 
+#############################################################################
+def display_weather_forecast(station_id):
 
+    # This function "prints" the forecast for given stationID.  It really should
+    # just return a data structure but for now this does the job.
+    
+    stationID,stationName,stationLON,stationLAT = get_wx_station_info(station_id)
+
+    # Get Station Forecast Information
+    station_forecast_url = '{}/points/{},{}' . format(API_URL, stationLAT, stationLON)
+    forecast_station_data = urlreq(station_forecast_url)
+
+    #pretty_json = json.dumps(forecast_station_data, indent=4)
+    #print (pretty_json)
+
+    # This is the URL we parse for forecast data
+    forecast_url = forecast_station_data["properties"]["forecast"]
+    forecast_grid_data = urlreq(forecast_url)
+
+    # Print Header
+    header = 'Forecast Information for {}({})' . format(stationName, stationID)
+    print(header)
+    print('')
+    # Print the Forecast 
+    for period in forecast_grid_data["properties"]["periods"]:
+        DashNumber = len(period['name'])
+	# Get column width of terminal
+        cwidth = shutil.get_terminal_size().columns
+        PeriodName=period['name']
+        centered_PeriodName = PeriodName.center(cwidth)
+        seperator = "-" * DashNumber
+        centered_seperator = seperator.center(cwidth)
+        #print (period['name'])
+        print (centered_PeriodName)
+        print (centered_seperator)
+        #print ("-" * DashNumber)
+        print (period['detailedForecast'])
+        print ("*" * cwidth)
+
+    return()
+    
 #############################################################################
 # Print Weather Data to screen based on options
 #############################################################################
@@ -570,10 +635,13 @@ def display_weather_data(station_id, options):
     else:
         metricflag = False
 
-    api_url = 'https://api.weather.gov'
+    #api_url = 'https://api.weather.gov'
+    api_url = API_URL
     # Get Station Information
-    station_url = '{}/stations/{}' . format(api_url, station_id)
-    stationID,stationName,stationLON,stationLAT = get_wx_station_info(station_url)
+    #station_url = '{}/stations/{}' . format(api_url, station_id)
+
+    stationID,stationName,stationLON,stationLAT = get_wx_station_info(station_id)
+
     # Get Station Data Information
     station_data_url = '{}/stations/{}/observations/latest' . format(api_url, station_id)
     data = urlreq(station_data_url)
@@ -736,6 +804,7 @@ def display_weather_data(station_id, options):
 #############################################################################
 ME=sys.argv[0]
 ME=os.path.basename(ME)
+API_URL = 'https://api.weather.gov'
 
 parser = argparse.ArgumentParser(usage='%(prog)s [options] StationID',description='Utlilty for printing weather conditions')
 parser.add_argument("stationID", metavar="StationID", type=str, help="The name of the wx station ID to get condition from")
@@ -749,17 +818,27 @@ parser.add_argument("-i", "--heatindex", help="Print heatindex for given station
 parser.add_argument("-c", "--winddirection", help="Print wind direction for given stationID", action="store_true", default=False)
 parser.add_argument("-g", "--windgust", help="Print wind gust for given stationID", action="store_true", default=False)
 parser.add_argument("-s", "--windspeed", help="Print wind speed for given stationID", action="store_true", default=False)
+parser.add_argument("--forecast", help="Print Forecast for given StationID", action="store_true", default=False)
 parser.add_argument("--script", help="Print all data formated on a single line for parsing by external script", action="store_true")
 parser.add_argument("--metric", help="Print all data in metric units", action="store_true")
 parser.add_argument("--valuesonly", help="Display on data values, no titles", action="store_true")
 parser.add_argument("--noheaders", help="Don't display header with station info", action="store_true")
 parser.add_argument("--allvalues", help="Dislay all data values", action="store_true")
 parser.add_argument("--icon", help="Display weather icon for weather value", action="store_true")
-parser.add_argument("--icononly", help="onlh display icons for weather value", action="store_true")
+parser.add_argument("--icononly", help="only display icons for weather value", action="store_true")
+
+
+# check for arguments passed
+if len(sys.argv) == 1:
+   parser.print_help()
+   sys.exit(1)
 
 args = parser.parse_args()
 
-
+if args.forecast:
+    display_forecast = True
+else:
+    display_forecast = False
 # define options to pass to display_weather_data() based on command line options
 if args.weather:
     display_weather = True
@@ -841,6 +920,10 @@ display_options = { 'display_weather':display_weather, 'display_temp':display_te
 
 
 station_id = args.stationID
+
+if display_forecast:
+   weather_forecast_list = display_weather_forecast(station_id)
+   sys.exit(0)
 
 # Display all data values if --allvalues flag is set
 if args.allvalues:
