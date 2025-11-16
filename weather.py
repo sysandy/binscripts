@@ -575,7 +575,8 @@ def get_wx_emoji(weather,sunrise,sunset):
         "patches of fog in vicinity": Foggy,
         "showers in vicinity fog": Foggy,
         "light freezing fog": Foggy,
-        "heavy freezing fog": Foggy
+        "heavy freezing fog": Foggy,
+	"fog": Foggy
     }
 
     # Return UNICODE value for emoji
