@@ -529,6 +529,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "snow showers in vicinity fog": Snow,
         "low drifting snow": Snow,
         "blowing snow": Snow,
+        "snow and blowing snow": Snow,
         "snow low drifting snow": Snow,
         "snow blowing snow": Snow,
         "light snow low drifting snow": Snow,
