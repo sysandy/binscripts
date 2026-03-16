@@ -330,6 +330,7 @@ def get_wx_emoji(weather,sunrise,sunset):
         "heavy drizzle": Rainy,
         "light rain fog/mist": Rainy,
         "light rain and fog/mist": Rainy,
+        "light rain and fog": Rainy,
         "fog/mist and light rain": Rainy,
         "drizzle fog/mist": Rainy,
         "light drizzle fog/mist": Rainy,
